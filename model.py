@@ -118,10 +118,11 @@ class DecoderNet(nn.Module):
         xs = torch.linspace(-1, 1, self.img_width+8)
         ys, xs = torch.meshgrid(ys, xs)
         self.coord_map = torch.stack((ys, xs)).unsqueeze(0)
+        self.register_buffer('coord_map_const', self.coord_map)
 
     def forward(self, z):
         z_tiled = z.unsqueeze(-1).unsqueeze(-1).repeat(1, 1, self.img_height+8, self.img_width+8)
-        coord_map = self.coord_map.repeat(z.shape[0], 1, 1, 1)
+        coord_map = self.coord_map_const.repeat(z.shape[0], 1, 1, 1)
         inp = torch.cat((z_tiled, coord_map), 1)
         result = self.convs(inp)
         return result
@@ -144,24 +145,23 @@ class Monet(nn.Module):
             mask, scope = self.attention(x, scope)
             masks.append(mask)
         masks.append(scope)
-        loss = torch.zeros(x.shape[0])
+        loss = torch.zeros_like(x[:, 0, 0, 0])
         mask_preds = []
         for i, mask in enumerate(masks):
             z, kl_z = self.__encoder_step(x, mask)
             sigma = 0.09 if i == 0 else 0.11
             p_x, mask_pred = self.__decoder_step(x, z, mask, sigma)
             mask_preds.append(mask_pred)
+            print('px', p_x)
+            print('klz', kl_z)
             loss += -p_x + self.beta * kl_z
 
         masks = torch.transpose(torch.cat(masks, 1), 1, 3)
         q_masks = dists.Categorical(logits=masks)
         q_masks_recon = dists.Categorical(logits=torch.stack(mask_preds, 3))
-        print(q_masks)
-        print(q_masks_recon)
         kl_masks = dists.kl_divergence(q_masks_recon, q_masks)
-        print(kl_masks.shape)
-        print(loss.shape)
         kl_masks = torch.sum(kl_masks, [1, 2])
+        print(kl_masks)
         loss += self.gamma * kl_masks
         return loss
 
