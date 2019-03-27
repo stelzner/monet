@@ -66,11 +66,11 @@ class AttentionNet(nn.Module):
     def forward(self, x, scope):
         inp = torch.cat((x, scope), 1)
         logits = self.unet(inp)
-        log_alpha = torch.log_softmax(logits, 1)
+        log_alpha = torch.softmax(logits, 1)
         # output channel 0 represents log alpha_k,
         # channel 1 represents log (1 - alpha_k).
-        mask = scope + log_alpha[:, 0:1]
-        new_scope = scope + log_alpha[:, 1:2]
+        mask = scope * log_alpha[:, 0:1]
+        new_scope = scope * log_alpha[:, 1:2]
         return mask, new_scope
 
 class EncoderNet(nn.Module):
@@ -112,7 +112,8 @@ class DecoderNet(nn.Module):
             nn.ReLU(inplace=True),
             nn.Conv2d(32, 32, 3),
             nn.ReLU(inplace=True),
-            nn.Conv2d(32, 4, 1)
+            nn.Conv2d(32, 4, 1),
+            nn.Sigmoid()
         )
         ys = torch.linspace(-1, 1, self.img_height+8)
         xs = torch.linspace(-1, 1, self.img_width+8)
@@ -137,6 +138,8 @@ class Monet(nn.Module):
         self.k = 4
         self.beta = 0.5
         self.gamma = 0.25
+        self.masks = None
+        self.complete_recon = None
 
     def forward(self, x):
         scope = torch.ones_like(x[:, 0:1])
@@ -147,21 +150,25 @@ class Monet(nn.Module):
         masks.append(scope)
         loss = torch.zeros_like(x[:, 0, 0, 0])
         mask_preds = []
+        complete_recon = torch.zeros_like(x)
         for i, mask in enumerate(masks):
             z, kl_z = self.__encoder_step(x, mask)
             sigma = 0.09 if i == 0 else 0.11
-            p_x, mask_pred = self.__decoder_step(x, z, mask, sigma)
+            p_x, x_recon, mask_pred = self.__decoder_step(x, z, mask, sigma)
             mask_preds.append(mask_pred)
-            print('px', p_x)
-            print('klz', kl_z)
+            # print('px', p_x.mean().item())
+            # print('klz', kl_z.mean().item())
             loss += -p_x + self.beta * kl_z
+            complete_recon += mask * x_recon
 
-        masks = torch.transpose(torch.cat(masks, 1), 1, 3)
+        self.masks = torch.cat(masks, 1)
+        self.complete_recon = complete_recon
+        masks = torch.transpose(self.masks, 1, 3)
         q_masks = dists.Categorical(logits=masks)
         q_masks_recon = dists.Categorical(logits=torch.stack(mask_preds, 3))
         kl_masks = dists.kl_divergence(q_masks_recon, q_masks)
         kl_masks = torch.sum(kl_masks, [1, 2])
-        print(kl_masks)
+        # print('kl masks', kl_masks.mean().item())
         loss += self.gamma * kl_masks
         return loss
 
@@ -169,23 +176,32 @@ class Monet(nn.Module):
     def __encoder_step(self, x, mask):
         encoder_input = torch.cat((x, mask), 1)
         q_params = self.encoder(encoder_input)
-        means = q_params[:, :16]
-        sigmas = torch.exp(q_params[:, 16:])
+        means = torch.sigmoid(q_params[:, :16]) * 6 - 3
+        sigmas = torch.sigmoid(q_params[:, 16:]) * 3
         dist = dists.Normal(means, sigmas)
-        z = dist.sample()
+        dist_0 = dists.Normal(0., sigmas)
+        z = means + dist_0.sample()
+        # print('z', z.min().item(), z.max().item())
         q_z = dist.log_prob(z)
+        # print('means', means)
         kl_z = dists.kl_divergence(dist, dists.Normal(0., 1.))
+        # print('px dists', dist)
+        # print('kl_z', kl_z)
         kl_z = torch.sum(kl_z, 1)
         return z, kl_z
 
     def __decoder_step(self, x, z, mask, sigma):
         decoder_output = self.decoder(z)
         x_recon = decoder_output[:, :3]
+        # print('recon', x_recon.min().item(), x_recon.max().item())
         mask_pred = decoder_output[:, 3]
         dist = dists.Normal(x_recon, sigma)
-        p_x = dist.log_prob(x) + mask
+        p_x = dist.log_prob(x)
+        # print('px min/max', p_x.min().item(), p_x.max().item())
+        # print(mask.shape, p_x.shape)
+        p_x *= mask
         p_x = torch.sum(p_x, [1, 2, 3])
-        return p_x, mask_pred
+        return p_x, x_recon, mask_pred
 
 
 

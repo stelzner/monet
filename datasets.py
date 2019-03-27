@@ -22,8 +22,7 @@ def make_sprites(n=50000, height=64, width=64):
     counts = np.zeros((n,))
     print('Generating sprite dataset...')
     for i in range(n):
-        if i < 100:
-            num_sprites = random_integers(0, 2)
+        num_sprites = random_integers(0, 2)
         counts[i] = num_sprites
         for j in range(num_sprites):
             pos_y = random_integers(0, height - 12)
@@ -52,9 +51,11 @@ def make_sprites(n=50000, height=64, width=64):
                         if abs(x - center_x) + abs(y - center_y) < (scale // 2.0):
                             sprite[x][y][cat] = 1.0
             images[i] += sprite
-        if i % 10000 == 0:
-            print('{}/{}'.format(i, n))
-    np.clip(images, 0.0, 1.0)
+        if i % 100 == 0:
+            progress_bar(i, n)
+            # print('{}/{}'.format(i, n))
+    # print('{}/{}'.format(n, n))
+    images = np.clip(images, 0.0, 1.0)
 
     return {'x_train': images[:4 * n // 5],
             'count_train': counts[:4 * n // 5],
