@@ -15,16 +15,12 @@ if __name__ == '__main__':
                                     transforms.Resize((64, 64)),
                                     transforms.ToTensor()
                                     ])
-    trainset = datasets.Sprites('./data/sprites_10000_50.npz', train=True,
-                               transform=transform)
+    trainset = datasets.Sprites(train=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
                                               shuffle=True, num_workers=2)
     monet = model.Monet().cuda()
-    print('params', monet.parameters())
     for w in monet.parameters():
-        print(w)
         nn.init.normal_(w)
-        print(w)
     optimizer = optim.RMSprop(monet.parameters(), lr=1e-4)
 
     for epoch in range(20):

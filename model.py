@@ -169,7 +169,9 @@ class Monet(nn.Module):
     def __encoder_step(self, x, mask):
         encoder_input = torch.cat((x, mask), 1)
         q_params = self.encoder(encoder_input)
-        dist = dists.Normal(q_params[:, :16], q_params[:, 16:])
+        means = q_params[:, :16]
+        sigmas = torch.exp(q_params[:, 16:])
+        dist = dists.Normal(means, sigmas)
         z = dist.sample()
         q_z = dist.log_prob(z)
         kl_z = dists.kl_divergence(dist, dists.Normal(0., 1.))
