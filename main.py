@@ -6,6 +6,8 @@ import torch.optim as optim
 import numpy as np
 import visdom
 
+import os
+
 import model
 import datasets
 
@@ -14,8 +16,13 @@ vis = visdom.Visdom()
 class MonetArgs:
     def __init__(self):
         self.vis_every = 50
+        self.num_slots = 4
         self.load_parameters = True
         self.checkpoint_file = './checkpoints/monet.ckpt'
+        self.batch_size = 64
+        self.num_epochs = 20
+        self.num_blocks = 5
+        self.channel_base = 64
 
 def numpify(tensor):
     return tensor.cpu().detach().numpy()
@@ -35,31 +42,19 @@ def visualize_masks(imgs, masks, recons):
     seg_maps /= 255.0
     vis.images(np.concatenate((imgs, seg_maps, recons), 0), nrow=imgs.shape[0])
 
-
-if __name__ == '__main__':
-    args = MonetArgs()
-    batch_size = 64
-    transform = transforms.Compose([transforms.ToTensor(),
-                                    transforms.Lambda(lambda x: x.float()),
-                                    ])
-    trainset = datasets.Sprites(train=True, transform=transform)
-    trainloader = torch.utils.data.DataLoader(trainset, batch_size=batch_size,
-                                              shuffle=True, num_workers=2)
-    monet = model.Monet().cuda()
-
-    if args.load_parameters:
+def run_training(monet, args, trainloader):
+    if args.load_parameters and os.path.isfile(args.checkpoint_file):
         monet.load_state_dict(torch.load(args.checkpoint_file))
+        print('Restored parameters from', args.checkpoint_file)
     else:
         for w in monet.parameters():
-            # print(w.shape)
-            # print('before', w.min(), w.max())
             std_init = 0.01
             nn.init.normal_(w, mean=0., std=std_init)
-            # print('after', w.min(), w.max())
+        print('Initialized parameters')
 
     optimizer = optim.RMSprop(monet.parameters(), lr=1e-4)
 
-    for epoch in range(20):
+    for epoch in range(args.num_epochs):
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             images, counts = data
@@ -81,4 +76,46 @@ if __name__ == '__main__':
 
         torch.save(monet.state_dict(), args.checkpoint_file)
 
-    print('done')
+    print('training done')
+
+def sprite_experiment():
+    args = MonetArgs()
+    transform = transforms.Compose([transforms.ToTensor(),
+                                    transforms.Lambda(lambda x: x.float()),
+                                    ])
+    trainset = datasets.Sprites(train=True, transform=transform)
+    trainloader = torch.utils.data.DataLoader(trainset,
+                                              batch_size=args.batch_size,
+                                              shuffle=True, num_workers=2)
+    monet = model.Monet(args, 64, 64).cuda()
+    run_training(monet, args, trainloader)
+
+def clevr_experiment():
+    args = MonetArgs()
+    args.channel_base = 16
+    args.batch_size = 20
+    args.num_slots = 11
+    args.num_blocks = 6
+    args.checkpoint_file = './checkpoints/clevr.ckpt'
+    # Crop as described in appendix C
+    crop_tf = transforms.Lambda(lambda x: transforms.functional.crop(x, 29, 64, 192, 192))
+    drop_alpha_tf = transforms.Lambda(lambda x: x[:3])
+    transform = transforms.Compose([crop_tf,
+                                    transforms.Resize((128, 128)),
+                                    transforms.ToTensor(),
+                                    drop_alpha_tf,
+                                    transforms.Lambda(lambda x: x.float()),
+                                   ])
+    trainset = datasets.Clevr('/data/stelzner/data/CLEVR_v1.0/images/train',
+                              transform=transform)
+
+    trainloader = torch.utils.data.DataLoader(trainset,
+                                              batch_size=args.batch_size,
+                                              shuffle=True, num_workers=4)
+    monet = model.Monet(args, 128, 128).cuda()
+    run_training(monet, args, trainloader)
+
+if __name__ == '__main__':
+    clevr_experiment()
+    # sprite_experiment()
+

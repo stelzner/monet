@@ -5,6 +5,7 @@ import torch
 from torch.utils.data import Dataset
 import numpy as np
 from numpy.random import random_integers
+from PIL import Image
 
 
 def progress_bar(count, total, status=''):
@@ -53,8 +54,6 @@ def make_sprites(n=50000, height=64, width=64):
             images[i] += sprite
         if i % 100 == 0:
             progress_bar(i, n)
-            # print('{}/{}'.format(i, n))
-    # print('{}/{}'.format(n, n))
     images = np.clip(images, 0.0, 1.0)
 
     return {'x_train': images[:4 * n // 5],
@@ -75,7 +74,6 @@ class Sprites(Dataset):
 
         self.transform = transform
         self.images = data['x_train'] if train else data['x_test']
-        # self.images = np.transpose(self.images, (0, 3, 1, 2))
         self.counts = data['count_train'] if train else data['count_test']
 
     def __len__(self):
@@ -86,4 +84,22 @@ class Sprites(Dataset):
         if self.transform is not None:
             img = self.transform(img)
         return img, self.counts[idx]
+
+
+class Clevr(Dataset):
+    def __init__(self, directory, transform=None):
+        self.directory = directory
+        self.filenames = os.listdir(directory)
+        self.n = len(self.filenames)
+        self.transform = transform
+
+    def __len__(self):
+        return self.n
+
+    def __getitem__(self, idx):
+        imgpath = os.path.join(self.directory, self.filenames[idx])
+        img = Image.open(imgpath)
+        if self.transform is not None:
+            img = self.transform(img)
+        return img, 1
 
