@@ -10,19 +10,10 @@ import os
 
 import model
 import datasets
+import config
 
 vis = visdom.Visdom()
 
-class MonetArgs:
-    def __init__(self):
-        self.vis_every = 50
-        self.num_slots = 4
-        self.load_parameters = True
-        self.checkpoint_file = './checkpoints/monet.ckpt'
-        self.batch_size = 64
-        self.num_epochs = 20
-        self.num_blocks = 5
-        self.channel_base = 64
 
 def numpify(tensor):
     return tensor.cpu().detach().numpy()
@@ -42,10 +33,10 @@ def visualize_masks(imgs, masks, recons):
     seg_maps /= 255.0
     vis.images(np.concatenate((imgs, seg_maps, recons), 0), nrow=imgs.shape[0])
 
-def run_training(monet, args, trainloader):
-    if args.load_parameters and os.path.isfile(args.checkpoint_file):
-        monet.load_state_dict(torch.load(args.checkpoint_file))
-        print('Restored parameters from', args.checkpoint_file)
+def run_training(monet, conf, trainloader):
+    if conf.load_parameters and os.path.isfile(conf.checkpoint_file):
+        monet.load_state_dict(torch.load(conf.checkpoint_file))
+        print('Restored parameters from', conf.checkpoint_file)
     else:
         for w in monet.parameters():
             std_init = 0.01
@@ -54,7 +45,7 @@ def run_training(monet, args, trainloader):
 
     optimizer = optim.RMSprop(monet.parameters(), lr=1e-4)
 
-    for epoch in range(args.num_epochs):
+    for epoch in range(conf.num_epochs):
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             images, counts = data
@@ -66,37 +57,32 @@ def run_training(monet, args, trainloader):
 
             running_loss += loss.item()
 
-            if i % args.vis_every == args.vis_every-1:
+            if i % conf.vis_every == conf.vis_every-1:
                 print('[%d, %5d] loss: %.3f' %
-                      (epoch + 1, i + 1, running_loss / args.vis_every))
+                      (epoch + 1, i + 1, running_loss / conf.vis_every))
                 running_loss = 0.0
                 visualize_masks(numpify(images[:8]),
                                 numpify(monet.masks[:8]),
                                 numpify(monet.complete_recon[:8]))
 
-        torch.save(monet.state_dict(), args.checkpoint_file)
+        torch.save(monet.state_dict(), conf.checkpoint_file)
 
     print('training done')
 
 def sprite_experiment():
-    args = MonetArgs()
+    conf = config.sprite_config
     transform = transforms.Compose([transforms.ToTensor(),
                                     transforms.Lambda(lambda x: x.float()),
                                     ])
     trainset = datasets.Sprites(train=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset,
-                                              batch_size=args.batch_size,
+                                              batch_size=conf.batch_size,
                                               shuffle=True, num_workers=2)
-    monet = model.Monet(args, 64, 64).cuda()
-    run_training(monet, args, trainloader)
+    monet = model.Monet(conf, 64, 64).cuda()
+    run_training(monet, conf, trainloader)
 
 def clevr_experiment():
-    args = MonetArgs()
-    args.channel_base = 16
-    args.batch_size = 20
-    args.num_slots = 11
-    args.num_blocks = 6
-    args.checkpoint_file = './checkpoints/clevr.ckpt'
+    conf = config.clevr_config
     # Crop as described in appendix C
     crop_tf = transforms.Lambda(lambda x: transforms.functional.crop(x, 29, 64, 192, 192))
     drop_alpha_tf = transforms.Lambda(lambda x: x[:3])
@@ -110,10 +96,10 @@ def clevr_experiment():
                               transform=transform)
 
     trainloader = torch.utils.data.DataLoader(trainset,
-                                              batch_size=args.batch_size,
+                                              batch_size=conf.batch_size,
                                               shuffle=True, num_workers=4)
-    monet = model.Monet(args, 128, 128).cuda()
-    run_training(monet, args, trainloader)
+    monet = model.Monet(conf, 128, 128).cuda()
+    run_training(monet, conf, trainloader)
 
 if __name__ == '__main__':
     clevr_experiment()

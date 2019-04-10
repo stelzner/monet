@@ -59,13 +59,13 @@ class UNet(nn.Module):
 
 
 class AttentionNet(nn.Module):
-    def __init__(self, args):
+    def __init__(self, conf):
         super().__init__()
-        self.args = args
-        self.unet = UNet(num_blocks=args.num_blocks,
+        self.conf = conf
+        self.unet = UNet(num_blocks=conf.num_blocks,
                          in_channels=4,
                          out_channels=2,
-                         channel_base=args.channel_base)
+                         channel_base=conf.channel_base)
 
     def forward(self, x, scope):
         inp = torch.cat((x, scope), 1)
@@ -136,10 +136,10 @@ class DecoderNet(nn.Module):
 
 
 class Monet(nn.Module):
-    def __init__(self, args, height, width):
+    def __init__(self, conf, height, width):
         super().__init__()
-        self.args = args
-        self.attention = AttentionNet(args)
+        self.conf = conf
+        self.attention = AttentionNet(conf)
         self.encoder = EncoderNet(height, width)
         self.decoder = DecoderNet(height, width)
         self.beta = 0.5
@@ -150,7 +150,7 @@ class Monet(nn.Module):
     def forward(self, x):
         scope = torch.ones_like(x[:, 0:1])
         masks = []
-        for i in range(self.args.num_slots-1):
+        for i in range(self.conf.num_slots-1):
             mask, scope = self.attention(x, scope)
             masks.append(mask)
         masks.append(scope)
