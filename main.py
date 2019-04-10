@@ -102,6 +102,6 @@ def clevr_experiment():
     run_training(monet, conf, trainloader)
 
 if __name__ == '__main__':
-    # clevr_experiment()
-    sprite_experiment()
+    clevr_experiment()
+    # sprite_experiment()
 

@@ -1,4 +1,5 @@
 from collections import namedtuple
+import os
 
 config_options = [
     # Training config
@@ -36,7 +37,7 @@ clevr_config = MonetConfig(vis_every=50,
                            num_epochs=20,
                            load_parameters=True,
                            checkpoint_file='./checkpoints/clevr.ckpt',
-                           data_dir='~/data/CLEVR_v1.0/images/train/',
+                           data_dir=os.path.expanduser('~/data/CLEVR_v1.0/images/train/'),
                            num_slots=11,
                            num_blocks=6,
                            channel_base=16,

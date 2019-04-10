@@ -161,7 +161,7 @@ class Monet(nn.Module):
         kl_zs = torch.zeros_like(loss)
         for i, mask in enumerate(masks):
             z, kl_z = self.__encoder_step(x, mask)
-            sigma = 0.09 if i == 0 else 0.11
+            sigma = self.conf.bg_sigma if i == 0 else self.conf.fg_sigma
             p_x, x_recon, mask_pred = self.__decoder_step(x, z, mask, sigma)
             mask_preds.append(mask_pred)
             loss += -p_x + self.beta * kl_z
