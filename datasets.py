@@ -63,14 +63,15 @@ def make_sprites(n=50000, height=64, width=64):
 
 
 class Sprites(Dataset):
-    def __init__(self, n=50000, canvas_size=64, np_file=None, train=True, transform=None):
-        if np_file is None:
-            np_file = './data/sprites_{}_{}.npz'.format(n, canvas_size)
-            if not os.path.isfile(np_file):
-                gen_data = make_sprites(n, canvas_size, canvas_size)
-                np.savez(np_file, **gen_data)
+    def __init__(self, directory, n=50000, canvas_size=64,
+                 train=True, transform=None):
+        np_file = 'sprites_{}_{}.npz'.format(n, canvas_size)
+        full_path = os.path.join(directory, np_file)
+        if not os.path.isfile(full_path):
+            gen_data = make_sprites(n, canvas_size, canvas_size)
+            np.savez(np_file, **gen_data)
 
-        data = np.load(np_file)
+        data = np.load(full_path)
 
         self.transform = transform
         self.images = data['x_train'] if train else data['x_test']

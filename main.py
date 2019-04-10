@@ -74,7 +74,7 @@ def sprite_experiment():
     transform = transforms.Compose([transforms.ToTensor(),
                                     transforms.Lambda(lambda x: x.float()),
                                     ])
-    trainset = datasets.Sprites(train=True, transform=transform)
+    trainset = datasets.Sprites(conf.data_dir, train=True, transform=transform)
     trainloader = torch.utils.data.DataLoader(trainset,
                                               batch_size=conf.batch_size,
                                               shuffle=True, num_workers=2)
@@ -92,7 +92,7 @@ def clevr_experiment():
                                     drop_alpha_tf,
                                     transforms.Lambda(lambda x: x.float()),
                                    ])
-    trainset = datasets.Clevr('/data/stelzner/data/CLEVR_v1.0/images/train',
+    trainset = datasets.Clevr(conf.data_dir,
                               transform=transform)
 
     trainloader = torch.utils.data.DataLoader(trainset,
@@ -102,6 +102,6 @@ def clevr_experiment():
     run_training(monet, conf, trainloader)
 
 if __name__ == '__main__':
-    clevr_experiment()
-    # sprite_experiment()
+    # clevr_experiment()
+    sprite_experiment()
 
