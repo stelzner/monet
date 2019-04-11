@@ -20,6 +20,7 @@ def numpify(tensor):
 
 def visualize_masks(imgs, masks, recons):
     print('recons min/max', recons.min().item(), recons.max().item())
+    recons = np.clip(recons, 0., 1.)
     colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (255, 255, 0)]
     colors.extend([(c[0]//2, c[1]//2, c[2]//2) for c in colors])
     colors.extend([(c[0]//4, c[1]//4, c[2]//4) for c in colors])
@@ -51,7 +52,8 @@ def run_training(monet, conf, trainloader):
             images, counts = data
             images = images.cuda()
             optimizer.zero_grad()
-            loss = torch.mean(monet(images))
+            output = monet(images)
+            loss = torch.mean(output['loss'])
             loss.backward()
             optimizer.step()
 
@@ -62,8 +64,8 @@ def run_training(monet, conf, trainloader):
                       (epoch + 1, i + 1, running_loss / conf.vis_every))
                 running_loss = 0.0
                 visualize_masks(numpify(images[:8]),
-                                numpify(monet.masks[:8]),
-                                numpify(monet.complete_recon[:8]))
+                                numpify(output['masks'][:8]),
+                                numpify(output['reconstructions'][:8]))
 
         torch.save(monet.state_dict(), conf.checkpoint_file)
 
@@ -79,6 +81,8 @@ def sprite_experiment():
                                               batch_size=conf.batch_size,
                                               shuffle=True, num_workers=2)
     monet = model.Monet(conf, 64, 64).cuda()
+    if conf.parallel:
+        monet = nn.DataParallel(monet)
     run_training(monet, conf, trainloader)
 
 def clevr_experiment():
@@ -97,8 +101,10 @@ def clevr_experiment():
 
     trainloader = torch.utils.data.DataLoader(trainset,
                                               batch_size=conf.batch_size,
-                                              shuffle=True, num_workers=4)
+                                              shuffle=True, num_workers=8)
     monet = model.Monet(conf, 128, 128).cuda()
+    if conf.parallel:
+        monet = nn.DataParallel(monet)
     run_training(monet, conf, trainloader)
 
 if __name__ == '__main__':

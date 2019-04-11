@@ -1,7 +1,6 @@
 import torch
 import torch.nn as nn
 import torch.distributions as dists
-import pyro
 
 import torchvision
 
@@ -144,8 +143,6 @@ class Monet(nn.Module):
         self.decoder = DecoderNet(height, width)
         self.beta = 0.5
         self.gamma = 0.25
-        self.masks = None
-        self.complete_recon = None
 
     def forward(self, x):
         scope = torch.ones_like(x[:, 0:1])
@@ -156,7 +153,7 @@ class Monet(nn.Module):
         masks.append(scope)
         loss = torch.zeros_like(x[:, 0, 0, 0])
         mask_preds = []
-        complete_recon = torch.zeros_like(x)
+        full_reconstruction = torch.zeros_like(x)
         p_xs = torch.zeros_like(loss)
         kl_zs = torch.zeros_like(loss)
         for i, mask in enumerate(masks):
@@ -167,13 +164,11 @@ class Monet(nn.Module):
             loss += -p_x + self.beta * kl_z
             p_xs += -p_x
             kl_zs += kl_z
-            complete_recon += mask * x_recon
+            full_reconstruction += mask * x_recon
 
-        self.masks = torch.cat(masks, 1)
-        self.complete_recon = complete_recon
-        masks = torch.transpose(self.masks, 1, 3)
-        # print(masks[0, 0:3, :3])
-        q_masks = dists.Categorical(probs=masks)
+        masks = torch.cat(masks, 1)
+        tr_masks = torch.transpose(masks, 1, 3)
+        q_masks = dists.Categorical(probs=tr_masks)
         q_masks_recon = dists.Categorical(logits=torch.stack(mask_preds, 3))
         kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
         kl_masks = torch.sum(kl_masks, [1, 2])
@@ -181,7 +176,9 @@ class Monet(nn.Module):
               'kl_z', kl_zs.mean().item(),
               'kl masks', kl_masks.mean().item())
         loss += self.gamma * kl_masks
-        return loss
+        return {'loss': loss,
+                'masks': masks,
+                'reconstructions': full_reconstruction}
 
 
     def __encoder_step(self, x, mask):
