@@ -19,7 +19,9 @@ def numpify(tensor):
     return tensor.cpu().detach().numpy()
 
 def visualize_masks(imgs, masks, recons):
-    print('recons min/max', recons.min().item(), recons.max().item())
+    # print('recons min/max', recons[:, 0].min().item(), recons[:, 0].max().item())
+    # print('recons1 min/max', recons[:, 1].min().item(), recons[:, 1].max().item())
+    # print('recons2 min/max', recons[:, 2].min().item(), recons[:, 2].max().item())
     recons = np.clip(recons, 0., 1.)
     colors = [(0, 0, 255), (0, 255, 0), (255, 0, 0), (0, 255, 255), (255, 0, 255), (255, 255, 0)]
     colors.extend([(c[0]//2, c[1]//2, c[2]//2) for c in colors])
@@ -108,6 +110,6 @@ def clevr_experiment():
     run_training(monet, conf, trainloader)
 
 if __name__ == '__main__':
-    clevr_experiment()
-    # sprite_experiment()
+    # clevr_experiment()
+    sprite_experiment()
 

@@ -89,9 +89,11 @@ class EncoderNet(nn.Module):
             nn.Conv2d(64, 64, 3, stride=2),
             nn.ReLU(inplace=True)
         )
+
         for i in range(4):
             width = (width - 1) // 2
             height = (height - 1) // 2
+
         self.mlp = nn.Sequential(
             nn.Linear(64 * width * height, 256),
             nn.ReLU(inplace=True),
@@ -172,9 +174,9 @@ class Monet(nn.Module):
         q_masks_recon = dists.Categorical(logits=torch.stack(mask_preds, 3))
         kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
         kl_masks = torch.sum(kl_masks, [1, 2])
-        print('px', p_xs.mean().item(),
-              'kl_z', kl_zs.mean().item(),
-              'kl masks', kl_masks.mean().item())
+        # print('px', p_xs.mean().item(),
+        #       'kl_z', kl_zs.mean().item(),
+        #       'kl masks', kl_masks.mean().item())
         loss += self.gamma * kl_masks
         return {'loss': loss,
                 'masks': masks,
@@ -205,6 +207,9 @@ class Monet(nn.Module):
         return p_x, x_recon, mask_pred
 
 
-
+def print_image_stats(images, name):
+    print(name, '0 min/max', images[:, 0].min().item(), images[:, 0].max().item())
+    print(name, '1 min/max', images[:, 1].min().item(), images[:, 1].max().item())
+    print(name, '2 min/max', images[:, 2].min().item(), images[:, 2].max().item())
 
 
