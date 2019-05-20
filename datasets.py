@@ -1,3 +1,6 @@
+# License: MIT
+# Author: Karl Stelzner
+
 import os
 import sys
 

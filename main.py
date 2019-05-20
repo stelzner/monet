@@ -1,3 +1,6 @@
+# License: MIT
+# Author: Karl Stelzner
+
 import torch
 import torch.nn as nn
 import torchvision

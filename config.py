@@ -1,3 +1,6 @@
+# License: MIT
+# Author: Karl Stelzner
+
 from collections import namedtuple
 import os
 
