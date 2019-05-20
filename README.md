@@ -15,6 +15,7 @@ of images depicts the input, the second the inferred segmentation, and the third
 
 <img src="https://raw.githubusercontent.com/stelzner/MONet/master/images/sprite-results.png" alt="MONet on sprites" width="600">
 
+The attention network successfully learns to segment the images.
 One issue appears to be that distinct objects of the same color tend to not be separated. Since the model
 structure does not force objects to be spatially coherent, this is perhaps to be expected.
 
