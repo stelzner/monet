@@ -9,6 +9,15 @@ decompose scenes into objects and background in an unsupervised setting. Unlike 
 learns attention masks to obtain real segmentations instead of just bounding boxes. Objects and
 background appearances are modelled by a VAE.
 
+## Sample Results
+The following image shows a sample of results on a homemade version of the sprite dataset. The first line
+of images depicts the input, the second the inferred segmentation, and the third the reconstruction.
+
+<img src="https://raw.githubusercontent.com/stelzner/MONet/master/images/sprite-results.png" alt="MONet on sprites" width="600">
+
+One issue appears to be that distinct objects of the same color tend to not be separated. Since the model
+structure does not force objects to be spatially coherent, this is perhaps to be expected.
+
 ## Dependencies
 We ran our experiments using Python 3.6 and CUDA 9.0, making use of the following Python packages:
 
