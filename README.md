@@ -38,6 +38,6 @@ were not tested.
 
 ## Run
 Simply run `python main.py`. Adjust the configuration object created at the bottom of the file as
-needed, or use one configurations to reproduce the results above. Note that the experiments on CLEVR
-were run on a V100 GPU with 32GB of memory, so you may need to reduce the model size in order to fit
+needed, or use one of the provided configurations to reproduce the results above. Note that the experiments
+on CLEVR were run on a V100 GPU with 32GB of memory, so you may need to reduce the model size in order to fit
 it on a smaller GPU.
