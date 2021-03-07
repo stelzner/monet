@@ -1,5 +1,5 @@
 # MONet
-This repository contains an implementation of the DeepMind's MONet model for unsupervised scene decomposition in PyTorch. The
+This repository contains an implementation of DeepMind's MONet model for unsupervised scene decomposition in PyTorch. The
 model was presented in the paper "[MONet: Unsupervised Scene Decomposition and
 Representation](https://arxiv.org/abs/1901.11390)" by Christopher P. Burgess, Loic Matthey,
 Nicholas Watters, Rishabh Kabra, Irina Higgins, Matt Botvinick and Alexander Lerchner.
