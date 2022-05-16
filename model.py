@@ -172,7 +172,7 @@ class Monet(nn.Module):
             full_reconstruction += mask * x_recon
 
         masks = torch.cat(masks, 1)
-        tr_masks = torch.transpose(masks, 1, 3)
+        tr_masks = masks.permute(0, 2, 3, 1)
         q_masks = dists.Categorical(probs=tr_masks)
         q_masks_recon = dists.Categorical(logits=torch.stack(mask_preds, 3))
         kl_masks = dists.kl_divergence(q_masks, q_masks_recon)
